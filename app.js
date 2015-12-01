@@ -1,12 +1,42 @@
 var express = require('express');
+var passport = require('passport');
 var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var jwt = require('express-jwt');
 
-var routes = require('./routes/index');
-var users = require('./routes/users');
+/**
+ * Setting constants
+ */
+var _SECRET = process.env.JWT_SECRET;
+
+/**
+ * Load the models
+ */
+var Model = require('./models/Models');
+var User = Model.User;
+
+/**
+ * Require our passport config after we'eve loaded the usermodel
+ */
+require('./config/passport');
+
+
+/**
+ * Put the middlewares into a variable
+ */
+var jwtDecode = jwt({secret: _SECRET, userProperty: 'payload'});
+var authenticate = require('./middlewares/authenticate');
+
+
+/**
+ * Put the routes into a variable
+ */
+var api = require('./routes/api');
+var user = require('./routes/auth/user');
+
 
 var app = express();
 
@@ -21,9 +51,21 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(passport.initialize());
 
-app.use('/', routes);
-app.use('/users', users);
+
+/**
+ * Add middlewares here
+ */
+app.use('/api/auth/*', jwtDecode, authenticate);
+
+
+/**
+ * Add routes here
+ */
+app.use('/api', api);
+app.use('/api/auth/user', user);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
